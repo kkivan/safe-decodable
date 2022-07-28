@@ -69,7 +69,7 @@ final class safe_decodableTests: XCTestCase {
         }
         """
         let array: WithArray = decode(json)
-        XCTAssertEqual(array.arr?.count, 2)
+        XCTAssertEqual(array.arr.count, 2)
     }
 
     func testArrayOfStructs() {
@@ -81,12 +81,23 @@ final class safe_decodableTests: XCTestCase {
         """
         let array: WithSimpleArray = decode(json)
 
-        XCTAssertEqual(array.arr?[0].int, 1)
-        XCTAssertEqual(array.arr?[1].int, 1)
+        XCTAssertEqual(array.arr[0].int, 1)
+        XCTAssertEqual(array.arr[1].int, 1)
     }
 
-    func testGeneric() {
+    func testDictOfStructs() {
+        let json =
+        """
+        {
+            "nested": {
+                "str": "str"
+            }
+        }
+        """
 
+        let dict: [String: Safe<Simple>] = decode(json)
+
+        XCTAssertEqual(dict["nested"]?.wrappedValue?.str, "str")
     }
 }
 
@@ -102,9 +113,13 @@ struct Simple: Decodable {
 }
 
 struct WithArray: Decodable {
-    @SafeArray var arr: [Int]?
+    @SafeArray var arr: [Int]
 }
 
 struct WithSimpleArray: Decodable {
-    @SafeArray var arr: [Simple]?
+    @SafeArray var arr: [Simple]
+}
+
+struct WithSimpleDict: Decodable {
+    @SafeDictionary var nested: [String: Simple]
 }

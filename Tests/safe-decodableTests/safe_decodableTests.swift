@@ -12,8 +12,10 @@ final class safe_decodableTests: XCTestCase {
     func testSingleValues() throws {
         let int: Safe<Int> = decode("1")
         XCTAssertEqual(int.wrappedValue, 1)
+
         let str: Safe<String> = decode("\"str\"")
         XCTAssertEqual(str.wrappedValue, "str")
+
         let double: Safe<Double> = decode("1.1")
         XCTAssertEqual(double.wrappedValue, 1.1)
     }
@@ -26,7 +28,6 @@ final class safe_decodableTests: XCTestCase {
             "str": "str"
         }
         """
-
 
         let simple: Simple = decode(json)
         XCTAssertNotNil(simple.$int.error)
@@ -44,20 +45,35 @@ final class safe_decodableTests: XCTestCase {
         XCTAssertNotNil(simple.wrappedValue?.str)
     }
 
-    func estCollectErrors() {
+    func testCollectErrors() {
         let json =
         """
         {
             "int": "1",
             "str": "str",
             "nested": {
-                "str": "1"
+                "str": 1
             }
         }
         """
-        let nested: Nested = decode(json)
-        dump(nested)
-        XCTAssertEqual(nested.nested?.str, "str")
+        let nested: Safe<Nested> = decode(json)
+        // assert 3 errors but MissingValue shoud be discarded
+        XCTAssertEqual(nested.wrappedValue?.nested?.str, "str")
+    }
+
+    func testArray() {
+        let json =
+        """
+        {
+            "arr": [1,2,"3"]
+        }
+        """
+        let safeArray: WithArray = decode(json)
+        XCTAssertEqual(safeArray.arr?.count, 2)
+    }
+
+    func testGeneric() {
+
     }
 }
 
@@ -70,4 +86,8 @@ struct Nested: Decodable {
 struct Simple: Decodable {
     @Safe var int: Int?
     @Safe var str: String?
+}
+
+struct WithArray: Decodable {
+    @SafeArray var arr: [Int]?
 }

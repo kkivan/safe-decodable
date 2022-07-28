@@ -1,4 +1,3 @@
-struct MissingValue<T>: Error {}
 
 @propertyWrapper public struct Safe<T> {
     public var wrappedValue: T? {
@@ -9,6 +8,36 @@ struct MissingValue<T>: Error {}
     public init(projectedValue: Result<T, Error>) {
         self.projectedValue = projectedValue
     }
+}
+
+@propertyWrapper public struct SafeArray<T> {
+    public var wrappedValue: [T]? {
+        projectedValue.compactMap(\.wrappedValue)
+    }
+
+    public let projectedValue: [Safe<T>]
+    public init(projectedValue: [Safe<T>]) {
+        self.projectedValue = projectedValue
+    }
+}
+
+extension SafeArray: Decodable where T: Decodable {
+    public init(from decoder: Decoder) throws {
+        self.projectedValue = try [Safe<T>].init(from: decoder)
+    }
+}
+
+public extension Safe where T: ErrorCollector {
+    func collectErrors() -> [Error] {
+        switch projectedValue {
+            case .failure(let error): return [error]
+            case .success(let value): return value.collectErrors()
+        }
+    }
+}
+
+public protocol ErrorCollector {
+    func collectErrors() -> [Error]
 }
 
 
@@ -46,7 +75,15 @@ public extension KeyedDecodingContainer {
         if let value = try self.decodeIfPresent(Safe<P>.self, forKey: key) {
             return value
         } else {
-            return Safe(projectedValue: .failure(MissingValue<P>()))
+            return Safe(projectedValue: .failure(MissingValue<P>(codingPath: codingPath + [key])))
         }
+    }
+}
+
+struct MissingValue<T>: Error, CustomStringConvertible {
+    let codingPath: [CodingKey]
+
+    var description: String {
+        "\(Self.self) codingPath: \(codingPath.map(\.stringValue).joined(separator: "."))"
     }
 }

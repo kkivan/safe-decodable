@@ -1,6 +1,6 @@
 import Foundation
 
-@propertyWrapper public struct Safe<T> {
+@propertyWrapper public struct Safe<T: Decodable> {
     public var wrappedValue: T? {
         projectedValue.value
     }
@@ -11,7 +11,7 @@ import Foundation
     }
 }
 
-@propertyWrapper public struct SafeArray<T> {
+@propertyWrapper public struct SafeArray<T: Decodable> {
     public var wrappedValue: [T] {
         projectedValue.compactMap(\.wrappedValue)
     }
@@ -22,7 +22,7 @@ import Foundation
     }
 }
 
-extension SafeArray: Decodable where T: Decodable {
+extension SafeArray: Decodable {
     public init(from decoder: Decoder) throws {
         self.projectedValue = try [Safe<T>].init(from: decoder)
     }
@@ -45,19 +45,34 @@ extension SafeDictionary: Decodable where T: Decodable {
     }
 }
 
-public extension Safe where T: ErrorCollector {
-    func collectErrors() -> [Error] {
+protocol SafeErrors {
+    var safeErrors: [Error] { get }
+}
+
+extension Safe: SafeErrors  {
+    var safeErrors: [Error] {
         switch projectedValue {
-            case .failure(let error): return [error]
-            case .success(let value): return value.collectErrors()
+            case .failure(let error):
+                return [error]
+            case .success(let value):
+                let m = Mirror(reflecting: value)
+                let errors = m.children.map(\.value).compactMap { $0 as? SafeErrors }.flatMap(\.safeErrors)
+                return errors
         }
     }
 }
 
-public protocol ErrorCollector {
-    func collectErrors() -> [Error]
+extension SafeArray: SafeErrors {
+    var safeErrors: [Error] {
+        projectedValue.flatMap(\.safeErrors)
+    }
 }
 
+extension SafeDictionary: SafeErrors {
+    var safeErrors: [Error] {
+        projectedValue.flatMap(\.value.safeErrors)
+    }
+}
 
 extension Safe: Decodable where T: Decodable {
     public init(from decoder: Decoder) throws {

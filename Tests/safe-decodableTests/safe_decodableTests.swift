@@ -57,8 +57,7 @@ final class safe_decodableTests: XCTestCase {
         }
         """
         let nested: Safe<Nested> = decode(json)
-        // assert 3 errors but MissingValue shoud be discarded
-        XCTAssertEqual(nested.wrappedValue?.nested?.str, "str")
+        XCTAssertEqual(nested.safeErrors.count, 3)
     }
 
     func testArray() {

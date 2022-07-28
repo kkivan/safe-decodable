@@ -68,8 +68,21 @@ final class safe_decodableTests: XCTestCase {
             "arr": [1,2,"3"]
         }
         """
-        let safeArray: WithArray = decode(json)
-        XCTAssertEqual(safeArray.arr?.count, 2)
+        let array: WithArray = decode(json)
+        XCTAssertEqual(array.arr?.count, 2)
+    }
+
+    func testArrayOfStructs() {
+        let json =
+        """
+        {
+            "arr": [{ "int": 1, "str": 1 }, { "int": 1, "str": 1 }]
+        }
+        """
+        let array: WithSimpleArray = decode(json)
+
+        XCTAssertEqual(array.arr?[0].int, 1)
+        XCTAssertEqual(array.arr?[1].int, 1)
     }
 
     func testGeneric() {
@@ -90,4 +103,8 @@ struct Simple: Decodable {
 
 struct WithArray: Decodable {
     @SafeArray var arr: [Int]?
+}
+
+struct WithSimpleArray: Decodable {
+    @SafeArray var arr: [Simple]?
 }
